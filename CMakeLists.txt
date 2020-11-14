@@ -3,4 +3,4 @@ project(stepik_cource C)
 
 set(CMAKE_C_STANDARD 99)
 
-add_executable(stepik_cource src/main.c src/tree/graph.h src/tree/graph.c src/tree/list.h src/tree/list.c src/tree/graph_writer.h src/tree/graph_writer.c)
+add_executable(stepik_cource src/main.c src/graph/graph.h src/graph/graph.c src/graph/list.h src/graph/list.c src/graph/graph_writer.h src/graph/graph_writer.c)

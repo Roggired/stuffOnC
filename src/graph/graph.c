@@ -30,6 +30,12 @@ void node_set_id(struct graph* graph, struct node* node) {
     graph->current_available_id++;
 }
 
+static
+void node_add_child(struct node* node, struct node* child) {
+    node->children_list = list_add_front(node->children_list, child);
+    child->children_list = list_add_front(child->children_list, node);
+}
+
 struct node* node_create(struct graph* graph, entry value, struct node* parent) {
     struct node* result = malloc(sizeof(struct node));
     result->value = value;
@@ -59,12 +65,6 @@ void node_destroy(struct node* node) {
 }
 
 static
-void node_add_child(struct node* node, struct node* child) {
-    node->children_list = list_add_front(node->children_list, child);
-    child->children_list = list_add_front(child->children_list, node);
-}
-
-static
 void graph_alloc_visited_nodes(struct graph* graph) {
     if (graph->visited_nodes) {
         free(graph->visited_nodes);
@@ -75,16 +75,6 @@ void graph_alloc_visited_nodes(struct graph* graph) {
     for (size_t i = 0; i < graph->size; i++) {
         graph->visited_nodes[i] = 0;
     }
-}
-
-struct node* graph_find_dfs(struct graph* graph, entry target) {
-    if (!graph->size) {
-        return NULL;
-    }
-
-    graph_alloc_visited_nodes(graph);
-
-    node_find_dfs(graph->root_node, target, graph->visited_nodes);
 }
 
 static
@@ -117,6 +107,16 @@ struct node* node_find_dfs(const struct node* node, entry target, uint8_t* visit
     }
 }
 
+struct node* graph_find_dfs(struct graph* graph, entry target) {
+    if (!graph->size) {
+        return NULL;
+    }
+
+    graph_alloc_visited_nodes(graph);
+
+    node_find_dfs(graph->root_node, target, graph->visited_nodes);
+}
+
 static
 struct node* find_in_children_list(const struct list* children_list, uint8_t* visited_nodes, entry target) {
     struct node* result = children_list->value;
@@ -138,21 +138,7 @@ struct node* find_in_children_list(const struct list* children_list, uint8_t* vi
 }
 
 static
-struct node* node_find_bfs(const struct node* node, uint8_t* visited_nodes, entry target) {
-    if (node->children_list) {
-        struct node* result = find_in_children_list(node->children_list, visited_nodes, target);
-
-        if (result) {
-            return result;
-        }
-
-        visited_nodes[node->id] = 2;
-
-        return find_bsf_for_children_list(node->children_list, visited_nodes, target);
-    } else {
-        return NULL;
-    }
-}
+struct node* node_find_bfs(const struct node* node, uint8_t* visited_nodes, entry target);
 
 static
 struct node* find_bsf_for_children_list(const struct list* children_list, uint8_t* visited_nodes, entry target) {
@@ -173,6 +159,23 @@ struct node* find_bsf_for_children_list(const struct list* children_list, uint8_
         }
 
         children_list = children_list->next;
+    }
+}
+
+static
+struct node* node_find_bfs(const struct node* node, uint8_t* visited_nodes, entry target) {
+    if (node->children_list) {
+        struct node* result = find_in_children_list(node->children_list, visited_nodes, target);
+
+        if (result) {
+            return result;
+        }
+
+        visited_nodes[node->id] = 2;
+
+        return find_bsf_for_children_list(node->children_list, visited_nodes, target);
+    } else {
+        return NULL;
     }
 }
 

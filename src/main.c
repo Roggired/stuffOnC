@@ -1,11 +1,5 @@
-// Решаемая задача: поиск в глубину и поиск в ширину на дереве.
-// Нужно реализовать граф. Вершина может иметь любое число соседей.
-// Дерево заведомо без циклов.
-
-// Добавить обработку циклов
-
-#include "tree/graph.h"
-#include "tree/graph_writer.h"
+#include "graph/graph.h"
+#include "graph/graph_writer.h"
 
 #include <stdio.h>
 #include <inttypes.h>
