@@ -1,4 +1,4 @@
-#include "tree.h"
+#include "graph.h"
 
 #include <stdio.h>
 #include <inttypes.h>
@@ -7,9 +7,9 @@
 static
 void entry_print(struct node* node) {
     printf("%" PRId64 "\n", node->value);
-    printf("leafs: ");
+    printf("childs: ");
 
-    struct list* current_list = node->leafs_list;
+    struct list* current_list = node->children_list;
 
     while (current_list) {
         printf("%" PRId64 " ", current_list->value->value);
@@ -20,6 +20,6 @@ void entry_print(struct node* node) {
     printf("\n");
 }
 
-void tree_print(const struct node* tree) {
-    node_foreach_bfs(tree, entry_print);
+void graph_print(struct graph* graph) {
+    graph_foreach_bfs(graph, entry_print);
 }
