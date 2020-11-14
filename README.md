@@ -1,6 +1,6 @@
 # stuffOnC
 
-This repo contains my own experiments on C.
+This repo contains my own experiments on C. If you want to, you are welcome to review the code and add issues. 
 
 Current version contains:  
 - **Graph structure**  
