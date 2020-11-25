@@ -70,11 +70,16 @@ int main() {
     size_t path_size = 0;
     struct node** path = graph_find_smallest_path(graph, graph->nodes[0], graph->nodes[7], &path_size);
 
-    for (size_t i = 0; i < path_size; i++) {
-        printf("%" PRId32 " ", path[i]->id);
+    if (!path) {
+        printf("There is no path!\n");
+    } else {
+        for (size_t i = 0; i < path_size; i++) {
+            printf("%" PRId32 " ", path[i]->id);
+        }
+
+        printf("\n");
     }
 
-    printf("\n");
     printf("\n");
 
     for (size_t i = 0; i < graph->size; i++) {

@@ -222,6 +222,10 @@ void reverse_path(struct node** path, size_t size) {
 
 static
 struct node** smallest_path_build(struct graph* graph, struct node* origin, struct node* target, size_t* result_size) {
+    if (target->path_length == -1) {
+        return NULL;
+    }
+
     struct node** path = malloc(sizeof(struct node*) * 1);
 
     path[0] = target;
