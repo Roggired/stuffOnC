@@ -47,5 +47,39 @@ int main() {
     test_bfs_find(graph, 4);
     test_bfs_find(graph, 5);
 
+    printf("\n");
+
+    struct node* node6 = node_create(graph, 10, graph->root_node);
+    struct node* node7 = node_create(graph, 20, node6);
+    struct node* node8 = node_create(graph, 30, node7);
+    node_add_child(node8, graph->nodes[4]);
+
+    graph_print(graph);
+
+    printf("\n");
+
+    for (size_t i = 0; i < graph->size; i++) {
+        printf("%" PRId32 " ", graph->nodes[i]->id);
+    }
+
+    printf("\n");
+    printf("\n");
+
+    printf("Smallest path:" "\n");
+
+    size_t path_size = 0;
+    struct node** path = graph_find_smallest_path(graph, graph->nodes[0], graph->nodes[7], &path_size);
+
+    for (size_t i = 0; i < path_size; i++) {
+        printf("%" PRId32 " ", path[i]->id);
+    }
+
+    printf("\n");
+    printf("\n");
+
+    for (size_t i = 0; i < graph->size; i++) {
+        printf("%" PRId32 " ", graph->nodes[i]->path_length);
+    }
+
     graph_destroy(graph);
 }

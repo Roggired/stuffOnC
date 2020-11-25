@@ -8,6 +8,8 @@ struct graph* graph_create() {
     struct graph* result = malloc(sizeof(struct graph));
     result->size = 0;
     result->current_available_id = 0;
+    result->nodes = NULL;
+    result->previous_on_smallest_path = NULL;
     result->root_node = NULL;
     result->visited_nodes = NULL;
 
@@ -17,6 +19,14 @@ struct graph* graph_create() {
 void graph_destroy(struct graph* graph) {
     if (graph->visited_nodes) {
         free(graph->visited_nodes);
+    }
+
+    if (graph->previous_on_smallest_path) {
+        free(graph->previous_on_smallest_path);
+    }
+
+    if (graph->nodes) {
+        free(graph->nodes);
     }
 
     node_destroy(graph->root_node);
@@ -30,7 +40,7 @@ void node_set_id(struct graph* graph, struct node* node) {
     graph->current_available_id++;
 }
 
-static
+
 void node_add_child(struct node* node, struct node* child) {
     node->children_list = list_add_front(node->children_list, child);
     child->children_list = list_add_front(child->children_list, node);
@@ -45,9 +55,13 @@ struct node* node_create(struct graph* graph, entry value, struct node* parent) 
 
     if (parent) {
         node_add_child(parent, result);
+        graph->nodes = realloc(graph->nodes, sizeof(struct node*) * (graph->size + 1));
     } else {
         graph->root_node = result;
+        graph->nodes = malloc(sizeof(struct node*) * 1);
     }
+
+    graph->nodes[result->id] = result;
 
     graph->size++;
 
@@ -192,13 +206,127 @@ struct node* graph_find_bfs(struct graph* graph, entry target) {
 }
 
 static
-void node_foreach_bfs(struct node* node, uint8_t* visited_nodes, void(entry_consumer)(struct node* current)) {
+struct node* smallest_path_next(struct graph* graph, struct node* origin, struct node* current) {
+    uint32_t previous_node_id = graph->previous_on_smallest_path[current->id];
+    return graph->nodes[previous_node_id];
+}
+
+static
+void reverse_path(struct node** path, size_t size) {
+    for (size_t i = 0; i < size / 2; ++i) {
+        struct node* tmp = path[i];
+        path[i] = path[size - i - 1];
+        path[size - i - 1] = tmp;
+    }
+}
+
+static
+struct node** smallest_path_build(struct graph* graph, struct node* origin, struct node* target, size_t* result_size) {
+    struct node** path = malloc(sizeof(struct node*) * 1);
+
+    path[0] = target;
+
+    size_t path_size = 1;
+    struct node* next = smallest_path_next(graph, origin, target);
+
+    while(next) {
+        path = realloc(path, sizeof(struct node*) * (path_size + 1));
+        path[path_size] = next;
+
+        if (next == origin) {
+            break;
+        }
+
+        path_size++;
+        next = smallest_path_next(graph, origin, next);
+    }
+
+    reverse_path(path, path_size);
+    *result_size = path_size;
+
+    return path;
+}
+
+static
+void smallest_path_foreach_node_change_mark(struct graph* graph, struct node* node) {
+    if (!node->children_list) {
+        return;
+    }
+
+    struct list* current_list = node->children_list;
+    struct node* current = current_list->value;
+
+    struct list* nodes_for_checking = NULL;
+
+    while (1) {
+        if (current->path_length == -1 || current->path_length > node->path_length + 1) {
+            current->path_length = node->path_length + 1;
+            graph->previous_on_smallest_path[current->id] = node->id;
+
+            if (nodes_for_checking) {
+                nodes_for_checking = list_add_front(nodes_for_checking, current);
+            } else {
+                nodes_for_checking = list_create(current);
+            }
+        }
+
+        if (!current_list->next) {
+            break;
+        }
+
+        current_list = current_list->next;
+        current = current_list->value;
+    }
+
+    if (!nodes_for_checking) {
+        return;
+    }
+
+    while (1) {
+        smallest_path_foreach_node_change_mark(graph, nodes_for_checking->value);
+
+        if (!nodes_for_checking->next) {
+            break;
+        }
+
+        nodes_for_checking = nodes_for_checking->next;
+    }
+}
+
+struct node** graph_find_smallest_path(struct graph* graph, struct node* origin, struct node* target, size_t* result_size) {
+    if (origin == target) {
+        struct node** path = malloc(sizeof(struct node*) * 1);
+        path[0] = origin;
+
+        return path;
+    }
+
+    if (graph->previous_on_smallest_path) {
+        free(graph->previous_on_smallest_path);
+    }
+
+    graph->previous_on_smallest_path = malloc(sizeof(uint32_t) * graph->size);
+
+    for (size_t i = 0; i < graph->size; i++) {
+        graph->nodes[i]->path_length = -1;
+    }
+
+    origin->path_length = 0;
+    graph->previous_on_smallest_path[origin->id] = origin->id;
+
+    smallest_path_foreach_node_change_mark(graph, origin);
+
+    return smallest_path_build(graph, origin, target, result_size);
+}
+
+static
+void node_foreach_bfs(struct graph* graph, struct node* node, uint8_t* visited_nodes, void(entry_consumer)(struct graph* context, struct node* current, struct node* previous)) {
     if (node->children_list) {
         struct list* current_list = node->children_list;
 
         while (1) {
             if (!visited_nodes[current_list->value->id]) {
-                entry_consumer(current_list->value);
+                entry_consumer(graph, current_list->value, node);
                 visited_nodes[current_list->value->id] = 1;
             }
 
@@ -215,7 +343,7 @@ void node_foreach_bfs(struct node* node, uint8_t* visited_nodes, void(entry_cons
 
         while (1) {
             if (visited_nodes[current_list->value->id] != 2) {
-                node_foreach_bfs(current_list->value, visited_nodes, entry_consumer);
+                node_foreach_bfs(graph, current_list->value, visited_nodes, entry_consumer);
                 visited_nodes[current_list->value->id] = 2;
             }
 
@@ -228,11 +356,11 @@ void node_foreach_bfs(struct node* node, uint8_t* visited_nodes, void(entry_cons
     }
 }
 
-void graph_foreach_bfs(struct graph *graph, void(entry_consumer)(struct node* current)) {
+void graph_foreach_bfs(struct graph *graph, struct node* origin, void(entry_consumer)(struct graph* context, struct node* current, struct node* previous)) {
     graph_alloc_visited_nodes(graph);
 
-    entry_consumer(graph->root_node);
-    graph->visited_nodes[graph->root_node->id] = 1;
+    entry_consumer(graph, origin, NULL);
+    graph->visited_nodes[origin->id] = 1;
 
-    node_foreach_bfs(graph->root_node, graph->visited_nodes, entry_consumer);
+    node_foreach_bfs(graph, origin, graph->visited_nodes, entry_consumer);
 }

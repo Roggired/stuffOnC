@@ -5,14 +5,15 @@
 
 
 static
-void entry_print(struct node* node) {
-    printf("%" PRId64 "\n", node->value);
+void entry_print(struct graph* graph, struct node* node, struct node* previous) {
+    printf("Id: %" PRId32, node->id);
+    printf(" value: %" PRId64 "\n", node->value);
     printf("childs: ");
 
     struct list* current_list = node->children_list;
 
     while (current_list) {
-        printf("%" PRId64 " ", current_list->value->value);
+        printf("id: %" PRId32 " ", current_list->value->id);
 
         current_list = current_list->next;
     }
@@ -21,5 +22,5 @@ void entry_print(struct node* node) {
 }
 
 void graph_print(struct graph* graph) {
-    graph_foreach_bfs(graph, entry_print);
+    graph_foreach_bfs(graph, graph->root_node, entry_print);
 }
